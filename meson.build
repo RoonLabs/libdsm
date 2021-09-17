@@ -26,9 +26,9 @@ conf_data.set('_DEFAULT_SOURCE', 1)
 cc = meson.get_compiler('c')
 
 # Add -fvisibility=hidden if compiler supports those
-add_project_arguments(
-    cc.get_supported_arguments('-fvisibility=hidden'),
-    language : ['c'])
+#add_project_arguments(
+#    cc.get_supported_arguments('-fvisibility=hidden'),
+#    language : ['c'])
 
 
 dep_tasn1 = dependency('libtasn1')
@@ -42,15 +42,15 @@ optional_arguments = [
   '-Wstrict-aliasing',
   '-Wstrict-overflow' ]
 
-add_project_arguments(
-  cc.get_supported_arguments(optional_arguments),
-  language: 'c')
+#add_project_arguments(
+#  cc.get_supported_arguments(optional_arguments),
+#  language: 'c')
 
-if cc.has_argument('-fvisibility=hidden')
-    add_project_arguments('-fvisibility=hidden', language: 'c')
-else
-    warning('Compiler does not support -fvisibility=hidden, all symbols will be public!')
-endif
+#if cc.has_argument('-fvisibility=hidden')
+#    add_project_arguments('-fvisibility=hidden', language: 'c')
+#else
+#    warning('Compiler does not support -fvisibility=hidden, all symbols will be public!')
+#endif
 
 test_args = ''
 
@@ -267,3 +267,5 @@ if doxygen.found()
 else
   warning('Doxygen not found - continuing without Doxygen support')
 endif
+
+watcherobj = executable('watcher', 'src/roon_watcher.c', link_with : libdsm)
