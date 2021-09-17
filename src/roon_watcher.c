@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
-#include "../include/bdsm.h"
+#include "bdsm.h"
 
 static void print_entry(const char *what, void *p_opaque,
                         netbios_ns_entry *entry)

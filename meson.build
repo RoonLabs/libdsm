@@ -268,4 +268,6 @@ else
   warning('Doxygen not found - continuing without Doxygen support')
 endif
 
-watcherobj = executable('watcher', 'src/roon_watcher.c', link_with : libdsm)
+watcherobj = executable('watcher', 'src/roon_watcher.c',
+  link_with : libdsm,
+  include_directories: includes)
