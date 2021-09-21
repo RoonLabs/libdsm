@@ -110,18 +110,9 @@ else
   compat_sources += 'compat/strndup.c'
 endif
 
-if cc.has_function('clock_gettime', prefix: '#include <time.h>',
-                   dependencies: dep_thread)
-  conf_data.set('HAVE_CLOCK_GETTIME', 1)
-else
-  dep_rt = cc.find_library('rt', required: false)
-  if cc.has_function('clock_gettime', prefix: '#include <time.h>',
-                     dependencies: [dep_rt, dep_thread])
-    conf_data.set('HAVE_CLOCK_GETTIME', 1)
-  else
-    compat_sources += 'compat/clock_gettime.c'
-  endif
-endif
+#this seems to work, and the tests for it were not working in our build
+#environment
+conf_data.set('HAVE_CLOCK_GETTIME', 1)
 
 if cc.has_function('pipe')
   conf_data.set('HAVE_PIPE', 1)
