@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 
     ns = netbios_ns_new();
 
-    callbacks.p_opaque = (void*)&args;
+    callbacks.p_opaque = (void*)args;
     callbacks.pf_on_entry_added = on_entry_added;
     callbacks.pf_on_entry_removed = on_entry_removed;
 
