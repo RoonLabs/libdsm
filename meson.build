@@ -1,7 +1,7 @@
 project('libdsm', ['c'],
     version: '0.3.2',
     license: ['LGPL2'],
-    default_options: ['c_std=c11',
+    default_options: ['c_std=c99',
                       'warning_level=2',
                       'buildtype=release',
                       'b_ndebug=if-release'],
