@@ -83,8 +83,11 @@ BOOL WINAPI EnumerateFunc(LPNETRESOURCE lpnr)
                 if (RESOURCEUSAGE_CONTAINER == (lpnrLocal[i].dwUsage
                                                 & RESOURCEUSAGE_CONTAINER))
 //          if(!EnumerateFunc(hwnd, hdc, &lpnrLocal[i]))
-                    if (!EnumerateFunc(&lpnrLocal[i]))
-                        printf("EnumerateFunc returned FALSE\n");
+                    if (!EnumerateFunc(&lpnrLocal[i])) {
+                        printf("EnumerateFunc returned FALSE on item %d\n", i);
+                    } else {
+                        printf("EnumerateFunc returned TRUE on item %d\n", i);
+                    }
 //            TextOut(hdc, 10, 10, "EnumerateFunc returned FALSE.", 29);
             }
         }
