@@ -1,202 +1,117 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
-#pragma comment(lib, "mpr.lib")
+#pragma comment(lib, "netapi32.lib")
 
-#include <windows.h>
 #include <stdio.h>
-#include <winnetwk.h>
+#include <assert.h>
+#include <windows.h>
+#include <lm.h>
 
-BOOL WINAPI EnumerateFunc(LPNETRESOURCE lpnr);
-void DisplayStruct(int i, LPNETRESOURCE lpnrLocal);
-
-int main()
+int wmain(int argc, wchar_t * argv[])
 {
-
-    LPNETRESOURCE lpnr = NULL;
-
-    if (EnumerateFunc(lpnr) == FALSE) {
-        printf("Call to EnumerateFunc failed\n");
-        return 1;
-    } else
-        return 0;
-
-}
-
-BOOL WINAPI EnumerateFunc(LPNETRESOURCE lpnr)
-{
-    DWORD dwResult, dwResultEnum;
-    HANDLE hEnum;
-    DWORD cbBuffer = 16384;     // 16K is a good size
-    DWORD cEntries = -1;        // enumerate all possible entries
-    LPNETRESOURCE lpnrLocal;    // pointer to enumerated structures
+    LPSERVER_INFO_101 pBuf = NULL;
+    LPSERVER_INFO_101 pTmpBuf;
+    DWORD dwLevel = 101;
+    DWORD dwPrefMaxLen = MAX_PREFERRED_LENGTH;
+    DWORD dwEntriesRead = 0;
+    DWORD dwTotalEntries = 0;
+    DWORD dwTotalCount = 0;
+    DWORD dwServerType = SV_TYPE_SERVER;        // all servers
+    DWORD dwResumeHandle = 0;
+    NET_API_STATUS nStatus;
+    LPWSTR pszServerName = NULL;
+    LPWSTR pszDomainName = NULL;
     DWORD i;
-    //
-    // Call the WNetOpenEnum function to begin the enumeration.
-    //
-    dwResult = WNetOpenEnum(RESOURCE_GLOBALNET, // all network resources
-                            RESOURCETYPE_ANY,   // all resources
-                            0,  // enumerate all resources
-                            lpnr,       // NULL first time the function is called
-                            &hEnum);    // handle to the resource
 
-    if (dwResult != NO_ERROR) {
-        printf("WnetOpenEnum failed with error %d\n", dwResult);
-        return FALSE;
+    if (argc > 2) 
+    {
+        fwprintf(stderr, L"Usage: %s [DomainName]\n", argv[0]);
+        exit(1);
     }
+    // The request is not for the primary domain.
     //
-    // Call the GlobalAlloc function to allocate resources.
+    if (argc == 2)
+        pszDomainName = argv[1];
     //
-    lpnrLocal = (LPNETRESOURCE) GlobalAlloc(GPTR, cbBuffer);
-    if (lpnrLocal == NULL) {
-        printf("WnetOpenEnum failed with error %d\n", dwResult);
-//      NetErrorHandler(hwnd, dwResult, (LPSTR)"WNetOpenEnum");
-        return FALSE;
-    }
+    // Call the NetServerEnum function to retrieve information
+    //  for all servers, specifying information level 101.
+    //
+    nStatus = NetServerEnum(pszServerName,
+                            dwLevel,
+                            (LPBYTE *) & pBuf,
+                            dwPrefMaxLen,
+                            &dwEntriesRead,
+                            &dwTotalEntries,
+                            dwServerType, 
+                            pszDomainName, 
+                            &dwResumeHandle);
+    //
+    // If the call succeeds,
+    //
+    if ((nStatus == NERR_Success) || (nStatus == ERROR_MORE_DATA)) {
+        if ((pTmpBuf = pBuf) != NULL) {
+            //
+            // Loop through the entries and 
+            //  print the data for all server types.
+            //
+            for (i = 0; i < dwEntriesRead; i++) {
+                assert(pTmpBuf != NULL);
 
-    do {
-        //
-        // Initialize the buffer.
-        //
-        ZeroMemory(lpnrLocal, cbBuffer);
-        //
-        // Call the WNetEnumResource function to continue
-        //  the enumeration.
-        //
-        dwResultEnum = WNetEnumResource(hEnum,  // resource handle
-                                        &cEntries,      // defined locally as -1
-                                        lpnrLocal,      // LPNETRESOURCE
-                                        &cbBuffer);     // buffer size
-        //
-        // If the call succeeds, loop through the structures.
-        //
-        if (dwResultEnum == NO_ERROR) {
-            for (i = 0; i < cEntries; i++) {
-                // Call an application-defined function to
-                //  display the contents of the NETRESOURCE structures.
+                if (pTmpBuf == NULL) {
+                    fprintf(stderr, "An access violation has occurred\n");
+                    break;
+                }
+
+                printf("\tPlatform: %d\n", pTmpBuf->sv101_platform_id);
+                wprintf(L"\tName:     %s\n", pTmpBuf->sv101_name);
+                printf("\tVersion:  %d.%d\n",
+                       pTmpBuf->sv101_version_major,
+                       pTmpBuf->sv101_version_minor);
+                printf("\tType:     %d", pTmpBuf->sv101_type);
                 //
-                DisplayStruct(i, &lpnrLocal[i]);
+                // Check to see if the server is a domain controller;
+                //  if so, identify it as a PDC or a BDC.
+                //
+                if (pTmpBuf->sv101_type & SV_TYPE_DOMAIN_CTRL)
+                    wprintf(L" (PDC)");
+                else if (pTmpBuf->sv101_type & SV_TYPE_DOMAIN_BAKCTRL)
+                    wprintf(L" (BDC)");
 
-                // If the NETRESOURCE structure represents a container resource, 
-                //  call the EnumerateFunc function recursively.
+                printf("\n");
+                //
+                // Also print the comment associated with the server.
+                //
+                wprintf(L"\tComment:  %s\n\n", pTmpBuf->sv101_comment);
 
-                if (RESOURCEUSAGE_CONTAINER == (lpnrLocal[i].dwUsage
-                                                & RESOURCEUSAGE_CONTAINER))
-//          if(!EnumerateFunc(hwnd, hdc, &lpnrLocal[i]))
-                    if (!EnumerateFunc(&lpnrLocal[i])) {
-                        printf("EnumerateFunc returned FALSE on item %d\n", i);
-                    } else {
-                        printf("EnumerateFunc returned TRUE on item %d\n", i);
-                    }
-//            TextOut(hdc, 10, 10, "EnumerateFunc returned FALSE.", 29);
+                pTmpBuf++;
+                dwTotalCount++;
             }
+            // Display a warning if all available entries were
+            //  not enumerated, print the number actually 
+            //  enumerated, and the total number available.
+
+            if (nStatus == ERROR_MORE_DATA) {
+                fprintf(stderr, "\nMore entries available!!!\n");
+                fprintf(stderr, "Total entries: %d", dwTotalEntries);
+            }
+
+            printf("\nEntries enumerated: %d\n", dwTotalCount);
+
+        } else {
+            printf("No servers were found\n");
+            printf("The buffer (bufptr) returned was NULL\n");
+            printf("  entriesread: %d\n", dwEntriesRead);
+            printf("  totalentries: %d\n", dwEntriesRead);
         }
-        // Process errors.
-        //
-        else if (dwResultEnum != ERROR_NO_MORE_ITEMS) {
-            printf("WNetEnumResource failed with error %d\n", dwResultEnum);
 
-//      NetErrorHandler(hwnd, dwResultEnum, (LPSTR)"WNetEnumResource");
-            break;
-        }
-    }
+    } else
+        fprintf(stderr, "NetServerEnum failed with error: %d\n", nStatus);
     //
-    // End do.
+    // Free the allocated buffer.
     //
-    while (dwResultEnum != ERROR_NO_MORE_ITEMS);
-    //
-    // Call the GlobalFree function to free the memory.
-    //
-    GlobalFree((HGLOBAL) lpnrLocal);
-    //
-    // Call WNetCloseEnum to end the enumeration.
-    //
-    dwResult = WNetCloseEnum(hEnum);
+    if (pBuf != NULL)
+        NetApiBufferFree(pBuf);
 
-    if (dwResult != NO_ERROR) {
-        //
-        // Process errors.
-        //
-        printf("WNetCloseEnum failed with error %d\n", dwResult);
-//    NetErrorHandler(hwnd, dwResult, (LPSTR)"WNetCloseEnum");
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-void DisplayStruct(int i, LPNETRESOURCE lpnrLocal)
-{
-    printf("NETRESOURCE[%d] Scope: ", i);
-    switch (lpnrLocal->dwScope) {
-    case (RESOURCE_CONNECTED):
-        printf("connected\n");
-        break;
-    case (RESOURCE_GLOBALNET):
-        printf("all resources\n");
-        break;
-    case (RESOURCE_REMEMBERED):
-        printf("remembered\n");
-        break;
-    default:
-        printf("unknown scope %d\n", lpnrLocal->dwScope);
-        break;
-    }
-
-    printf("NETRESOURCE[%d] Type: ", i);
-    switch (lpnrLocal->dwType) {
-    case (RESOURCETYPE_ANY):
-        printf("any\n");
-        break;
-    case (RESOURCETYPE_DISK):
-        printf("disk\n");
-        break;
-    case (RESOURCETYPE_PRINT):
-        printf("print\n");
-        break;
-    default:
-        printf("unknown type %d\n", lpnrLocal->dwType);
-        break;
-    }
-
-    printf("NETRESOURCE[%d] DisplayType: ", i);
-    switch (lpnrLocal->dwDisplayType) {
-    case (RESOURCEDISPLAYTYPE_GENERIC):
-        printf("generic\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_DOMAIN):
-        printf("domain\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_SERVER):
-        printf("server\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_SHARE):
-        printf("share\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_FILE):
-        printf("file\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_GROUP):
-        printf("group\n");
-        break;
-    case (RESOURCEDISPLAYTYPE_NETWORK):
-        printf("network\n");
-        break;
-    default:
-        printf("unknown display type %d\n", lpnrLocal->dwDisplayType);
-        break;
-    }
-
-    printf("NETRESOURCE[%d] Usage: 0x%x = ", i, lpnrLocal->dwUsage);
-    if (lpnrLocal->dwUsage & RESOURCEUSAGE_CONNECTABLE)
-        printf("connectable ");
-    if (lpnrLocal->dwUsage & RESOURCEUSAGE_CONTAINER)
-        printf("container ");
-    printf("\n");
-
-    printf("NETRESOURCE[%d] Localname: %S\n", i, lpnrLocal->lpLocalName);
-    printf("NETRESOURCE[%d] Remotename: %S\n", i, lpnrLocal->lpRemoteName);
-    printf("NETRESOURCE[%d] Comment: %S\n", i, lpnrLocal->lpComment);
-    printf("NETRESOURCE[%d] Provider: %S\n", i, lpnrLocal->lpProvider);
-    printf("\n");
+    return 0;
 }
