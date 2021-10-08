@@ -1,117 +1,74 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
-#pragma comment(lib, "netapi32.lib")
-
-#include <stdio.h>
-#include <assert.h>
 #include <windows.h>
+#include <stdio.h>
 #include <lm.h>
 
-int wmain(int argc, wchar_t * argv[])
+#pragma comment(lib, "Netapi32.lib")
+#pragma comment(lib, "Advapi32.lib")
+
+void wmain( int argc, TCHAR *lpszArgv[ ])
 {
-    LPSERVER_INFO_101 pBuf = NULL;
-    LPSERVER_INFO_101 pTmpBuf;
-    DWORD dwLevel = 101;
-    DWORD dwPrefMaxLen = MAX_PREFERRED_LENGTH;
-    DWORD dwEntriesRead = 0;
-    DWORD dwTotalEntries = 0;
-    DWORD dwTotalCount = 0;
-    DWORD dwServerType = SV_TYPE_SERVER;        // all servers
-    DWORD dwResumeHandle = 0;
-    NET_API_STATUS nStatus;
-    LPWSTR pszServerName = NULL;
-    LPWSTR pszDomainName = NULL;
-    DWORD i;
+   PSHARE_INFO_502 BufPtr,p;
+   NET_API_STATUS res;
+   LPTSTR   lpszServer = NULL;
+   DWORD er=0,tr=0,resume=0, i;
 
-    if (argc > 2) 
-    {
-        fwprintf(stderr, L"Usage: %s [DomainName]\n", argv[0]);
-        exit(1);
-    }
-    // The request is not for the primary domain.
-    //
-    if (argc == 2)
-        pszDomainName = argv[1];
-    //
-    // Call the NetServerEnum function to retrieve information
-    //  for all servers, specifying information level 101.
-    //
-    nStatus = NetServerEnum(pszServerName,
-                            dwLevel,
-                            (LPBYTE *) & pBuf,
-                            dwPrefMaxLen,
-                            &dwEntriesRead,
-                            &dwTotalEntries,
-                            dwServerType, 
-                            pszDomainName, 
-                            &dwResumeHandle);
-    //
-    // If the call succeeds,
-    //
-    if ((nStatus == NERR_Success) || (nStatus == ERROR_MORE_DATA)) {
-        if ((pTmpBuf = pBuf) != NULL) {
+   switch(argc)
+   {
+   case 2:
+      lpszServer = lpszArgv[1];
+      break;
+   default:
+      printf("Usage: NetShareEnum <servername>\n");
+      return;
+   }
+   //
+   // Print a report header.
+   //
+   printf("Share:              Local Path:                   Uses:   Descriptor:\n");
+   printf("---------------------------------------------------------------------\n");
+   //
+   // Call the NetShareEnum function; specify level 502.
+   //
+   do // begin do
+   {
+      res = NetShareEnum (lpszServer, 502, (LPBYTE *) &BufPtr, MAX_PREFERRED_LENGTH, &er, &tr, &resume);
+      //
+      // If the call succeeds,
+      //
+      if(res == ERROR_SUCCESS || res == ERROR_MORE_DATA)
+      {
+         p=BufPtr;
+         //
+         // Loop through the entries;
+         //  print retrieved data.
+         //
+         for(i=1;i<=er;i++)
+         {
+            printf("%-20S%-30S%-8u",p->shi502_netname, p->shi502_path, p->shi502_current_uses);
             //
-            // Loop through the entries and 
-            //  print the data for all server types.
+            // Validate the value of the 
+            //  shi502_security_descriptor member.
             //
-            for (i = 0; i < dwEntriesRead; i++) {
-                assert(pTmpBuf != NULL);
-
-                if (pTmpBuf == NULL) {
-                    fprintf(stderr, "An access violation has occurred\n");
-                    break;
-                }
-
-                printf("\tPlatform: %d\n", pTmpBuf->sv101_platform_id);
-                wprintf(L"\tName:     %s\n", pTmpBuf->sv101_name);
-                printf("\tVersion:  %d.%d\n",
-                       pTmpBuf->sv101_version_major,
-                       pTmpBuf->sv101_version_minor);
-                printf("\tType:     %d", pTmpBuf->sv101_type);
-                //
-                // Check to see if the server is a domain controller;
-                //  if so, identify it as a PDC or a BDC.
-                //
-                if (pTmpBuf->sv101_type & SV_TYPE_DOMAIN_CTRL)
-                    wprintf(L" (PDC)");
-                else if (pTmpBuf->sv101_type & SV_TYPE_DOMAIN_BAKCTRL)
-                    wprintf(L" (BDC)");
-
-                printf("\n");
-                //
-                // Also print the comment associated with the server.
-                //
-                wprintf(L"\tComment:  %s\n\n", pTmpBuf->sv101_comment);
-
-                pTmpBuf++;
-                dwTotalCount++;
-            }
-            // Display a warning if all available entries were
-            //  not enumerated, print the number actually 
-            //  enumerated, and the total number available.
-
-            if (nStatus == ERROR_MORE_DATA) {
-                fprintf(stderr, "\nMore entries available!!!\n");
-                fprintf(stderr, "Total entries: %d", dwTotalEntries);
-            }
-
-            printf("\nEntries enumerated: %d\n", dwTotalCount);
-
-        } else {
-            printf("No servers were found\n");
-            printf("The buffer (bufptr) returned was NULL\n");
-            printf("  entriesread: %d\n", dwEntriesRead);
-            printf("  totalentries: %d\n", dwEntriesRead);
-        }
-
-    } else
-        fprintf(stderr, "NetServerEnum failed with error: %d\n", nStatus);
-    //
-    // Free the allocated buffer.
-    //
-    if (pBuf != NULL)
-        NetApiBufferFree(pBuf);
-
-    return 0;
+            if (IsValidSecurityDescriptor(p->shi502_security_descriptor))
+               printf("Yes\n");
+            else
+               printf("No\n");
+            p++;
+         }
+         //
+         // Free the allocated buffer.
+         //
+         NetApiBufferFree(BufPtr);
+      }
+      else 
+         printf("Error: %ld\n",res);
+   }
+   // Continue to call NetShareEnum while 
+   //  there are more entries. 
+   // 
+   while (res==ERROR_MORE_DATA); // end do
+   return;
 }
