@@ -126,22 +126,9 @@ if cc.has_type('clockid_t', prefix: '#include<time.h>\n#include<pthread.h>')
   conf_data.set('HAVE_CLOCKID_T', 1)
 endif
 
-
-have_iconv = cc.has_function('iconv_open', prefix: '#include <iconv.h>')
 deps = []
 dep_thread = dependency('threads')
 deps += dep_thread
-if not have_iconv
-  dep_iconv  = [cc.find_library('iconv', required: false)]
-  have_iconv = cc.has_function('iconv_open',
-                               prefix: '#include <iconv.h>',
-                               dependencies: dep_iconv)
-  deps += dep_iconv
-endif
-
-if not have_iconv
-  error('iconv is not available')
-endif
 
 config_header = configure_file(
   input: 'config.h.meson',
@@ -180,6 +167,19 @@ if host_machine.system() == 'android'
 endif
 
 if host_machine.system() != 'windows'
+  have_iconv = cc.has_function('iconv_open', prefix: '#include <iconv.h>')
+  if not have_iconv
+    dep_iconv  = [cc.find_library('iconv', required: false)]
+    have_iconv = cc.has_function('iconv_open',
+                                 prefix: '#include <iconv.h>',
+                                 dependencies: dep_iconv)
+    deps += dep_iconv
+  endif
+
+  if not have_iconv
+    error('iconv is not available')
+  endif
+  
   dep_tasn1 = dependency('libtasn1')
   deps += dep_tasn1
   
