@@ -25,15 +25,6 @@ conf_data.set('_DEFAULT_SOURCE', 1)
 
 cc = meson.get_compiler('c')
 
-optional_arguments = [
-  '-Wall',
-  '-Wsign-compare',
-  '-Wextra',
-  '-Wstrict-aliasing',
-  '-Wstrict-overflow' ]
-
-add_project_arguments(optional_arguments, language: 'c')
-
 test_args = ''
 
 # Check headers
@@ -167,6 +158,15 @@ if host_machine.system() == 'android'
 endif
 
 if host_machine.system() != 'windows'
+  warning_arguments = [
+    '-Wall',
+    '-Wsign-compare',
+    '-Wextra',
+    '-Wstrict-aliasing',
+    '-Wstrict-overflow' ]
+  
+  add_project_arguments(warning_arguments, language: 'c')
+  
   have_iconv = cc.has_function('iconv_open', prefix: '#include <iconv.h>')
   if not have_iconv
     dep_iconv  = [cc.find_library('iconv', required: false)]
