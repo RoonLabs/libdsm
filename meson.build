@@ -68,8 +68,11 @@ elif host_machine.system() == 'darwin'
   add_project_arguments('-D_PLATFORM_MACOSX', language: 'c')
 else
   if host_machine.system() == 'windows'
-      add_project_arguments('-D_PLATFORM_WINDOWS', language: 'c')
+    add_project_arguments('-D_PLATFORM_WINDOWS', language: 'c')
+  elif host_machine.system() == 'cygwin'
+    add_project_arguments('-D_PLATFORM_WINDOWS', language: 'c')
   endif
+  
   test_args += '-D_POSIX_C_SOURCE=200809L'
   add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 endif
@@ -157,7 +160,7 @@ if host_machine.system() == 'android'
   deps += [cc.find_library('log', required: true)]
 endif
 
-if host_machine.system() != 'windows'
+if host_machine.system() != 'windows' and host_machine.system() != 'cygwin'
   warning_arguments = [
     '-Wall',
     '-Wsign-compare',
