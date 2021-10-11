@@ -61,16 +61,16 @@ endif
 if host_machine.system() == 'linux'
   test_args += '-D_GNU_SOURCE'
   add_project_arguments('-D_GNU_SOURCE', language: 'c')
-  add_project_arguments('-D_PLATFORM_LINUX', language: 'c')
+  add_project_arguments('-DPLATFORM_LINUX', language: 'c')
 elif host_machine.system() == 'darwin'
   test_args += '-D_DARWIN_C_SOURCE'
   add_project_arguments('-D_DARWIN_C_SOURCE', language: 'c')
-  add_project_arguments('-D_PLATFORM_MACOSX', language: 'c')
+  add_project_arguments('-DPLATFORM_MACOSX', language: 'c')
 else
   if host_machine.system() == 'windows'
-    add_project_arguments('-D_PLATFORM_WINDOWS', language: 'c')
+    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
   elif host_machine.system() == 'cygwin'
-    add_project_arguments('-D_PLATFORM_WINDOWS', language: 'c')
+    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
   endif
   
   test_args += '-D_POSIX_C_SOURCE=200809L'
