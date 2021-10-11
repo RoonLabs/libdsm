@@ -29,6 +29,7 @@ static void print_entry(const char *what, void *p_opaque,
            netbios_ns_entry_type(entry));
 }
 
+#ifndef PLATFORM_WINDOWS
 static int list_shares(void *p_opaque,
                        netbios_ns_entry *entry)
 {
@@ -94,13 +95,14 @@ static int list_shares(void *p_opaque,
 
     return 0;
 }
-
+#endif
 static void on_entry_added(void *p_opaque,
                            netbios_ns_entry *entry)
 {
     print_entry("added", p_opaque, entry);
-
+#ifndef PLATFORM_WINDOWS    
     int list_ret = list_shares(p_opaque, entry);
+#endif
 }
 
 static void on_entry_removed(void *p_opaque,

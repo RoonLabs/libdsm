@@ -37,11 +37,13 @@
 
 #include "bdsm/netbios_ns.h"
 #include "bdsm/netbios_defs.h"
+#ifndef PLATFORM_WINDOWS
 #include "bdsm/smb_types.h"
 #include "bdsm/smb_session.h"
 #include "bdsm/smb_share.h"
 #include "bdsm/smb_file.h"
 #include "bdsm/smb_stat.h"
 #include "bdsm/smb_dir.h"
+#endif
 
 #endif
