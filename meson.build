@@ -1,7 +1,7 @@
 project('libdsm', ['c'],
     version: '0.3.2',
     license: ['LGPL2'],
-    default_options: ['c_std=c99',
+    default_options: ['c_std=c11',
                       'warning_level=2',
                       'buildtype=release',
                       'b_ndebug=if-release'],
@@ -25,8 +25,18 @@ conf_data.set('_DEFAULT_SOURCE', 1)
 
 cc = meson.get_compiler('c')
 
-test_args = ''
+optional_arguments = [
+  '-Wall',
+  '-Wsign-compare',
+  '-Wextra',
+  '-Wstrict-aliasing',
+  '-Wstrict-overflow' ]
 
+add_project_arguments(
+  cc.get_supported_arguments(optional_arguments),
+  language: 'c')
+
+test_args = ''
 
 # Check functions
 if host_machine.system() == 'linux'
@@ -161,14 +171,6 @@ if host_machine.system() == 'android'
 endif
 
 if host_machine.system() != 'windows' and host_machine.system() != 'cygwin'
-  warning_arguments = [
-    '-Wall',
-    '-Wsign-compare',
-    '-Wextra',
-    '-Wstrict-aliasing',
-    '-Wstrict-overflow' ]
-  
-  add_project_arguments(warning_arguments, language: 'c')
   
   have_iconv = cc.has_function('iconv_open', prefix: '#include <iconv.h>')
   if not have_iconv
