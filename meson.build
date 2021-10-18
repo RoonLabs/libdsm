@@ -27,6 +27,27 @@ cc = meson.get_compiler('c')
 
 test_args = ''
 
+
+# Check functions
+if host_machine.system() == 'linux'
+  test_args += '-D_GNU_SOURCE'
+  add_project_arguments('-D_GNU_SOURCE', language: 'c')
+  add_project_arguments('-DPLATFORM_LINUX', language: 'c')
+elif host_machine.system() == 'darwin'
+  test_args += '-D_DARWIN_C_SOURCE'
+  add_project_arguments('-D_DARWIN_C_SOURCE', language: 'c')
+  add_project_arguments('-DPLATFORM_MACOSX', language: 'c')
+else
+  if host_machine.system() == 'windows'
+    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
+  elif host_machine.system() == 'cygwin'
+    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
+  endif
+  
+  test_args += '-D_POSIX_C_SOURCE=200809L'
+  add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
+endif
+
 # Check headers
 if cc.has_header('bsd/string.h')
   conf_data.set('HAVE_BSD_STRING_H', 1)
@@ -54,27 +75,6 @@ endif
 
 if cc.has_header('ifaddrs.h')
   conf_data.set('HAVE_IFADDRS_H', 1)
-endif
-
-
-# Check functions
-if host_machine.system() == 'linux'
-  test_args += '-D_GNU_SOURCE'
-  add_project_arguments('-D_GNU_SOURCE', language: 'c')
-  add_project_arguments('-DPLATFORM_LINUX', language: 'c')
-elif host_machine.system() == 'darwin'
-  test_args += '-D_DARWIN_C_SOURCE'
-  add_project_arguments('-D_DARWIN_C_SOURCE', language: 'c')
-  add_project_arguments('-DPLATFORM_MACOSX', language: 'c')
-else
-  if host_machine.system() == 'windows'
-    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
-  elif host_machine.system() == 'cygwin'
-    add_project_arguments('-DPLATFORM_WINDOWS', language: 'c')
-  endif
-  
-  test_args += '-D_POSIX_C_SOURCE=200809L'
-  add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 endif
 
 compat_sources = []
@@ -193,11 +193,7 @@ if host_machine.system() != 'windows' and host_machine.system() != 'cygwin'
                                      command: [asn1parser_prog, '-o', '@OUTPUT@', '-n', 'spnego_asn1_conf',
                                                '@INPUT@'])
   libdsm_sources += [
-    'contrib/mdx/md4.c',
-    'contrib/mdx/md5.c',
-    'contrib/rc4/rc4.c',
     spnego_asn1_target,
-    'src/hmac_md5.c',
     'src/smb_buffer.c',
     'src/smb_dir.c',
     'src/smb_fd.c',
@@ -221,7 +217,6 @@ if host_machine.system() != 'windows' and host_machine.system() != 'cygwin'
     'include/bdsm/smb_share.h',
     'include/bdsm/smb_stat.h',
     'include/bdsm/smb_types.h',
-    'include/bdsm.h'
   ]
 endif
 
