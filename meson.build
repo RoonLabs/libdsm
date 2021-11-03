@@ -229,8 +229,3 @@ libdsm = library('dsm',
                  include_directories: includes,
                  dependencies: deps,
                  install: true)
-
-watcherobj = executable('watcher', 'src/roon_watcher.c',
-                        link_with : libdsm,
-                        include_directories: includes)
-
