@@ -105,14 +105,6 @@ endif
 #environment
 conf_data.set('HAVE_CLOCK_GETTIME', 1)
 
-if cc.has_function('pipe')
-  conf_data.set('HAVE_PIPE', 1)
-endif
-
-if cc.has_function('_pipe')
-  conf_data.set('HAVE__PIPE', 1)
-endif
-
 if cc.has_function('getifaddrs')
   conf_data.set('HAVE_GETIFADDRS', 1)
 endif
@@ -128,6 +120,16 @@ endif
 
 if cc.has_type('clockid_t', prefix: '#include<time.h>\n#include<pthread.h>')
   conf_data.set('HAVE_CLOCKID_T', 1)
+endif
+
+if host_machine.system() != 'windows' and host_machine.system() != 'cygwin'
+  if cc.has_function('pipe')
+    conf_data.set('HAVE_PIPE', 1)
+  endif
+
+  if cc.has_function('_pipe')
+    conf_data.set('HAVE__PIPE', 1)
+  endif
 endif
 
 deps = []
