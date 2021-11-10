@@ -92,10 +92,10 @@ int smb_tree_connect(smb_session *s, const char *name, smb_tid *tid)
     }
     smb_message_destroy(req_msg);
 
-    if (smb_session_recv_msg(s, &resp_msg) <= 0)
+    if (!smb_session_recv_msg(s, &resp_msg))
         return DSM_ERROR_NETWORK;
 
-    if (smb_session_check_nt_status(s, &resp_msg) <= 0)
+    if (!smb_session_check_nt_status(s, &resp_msg))
         return DSM_ERROR_NT;
 
     if (resp_msg.payload_size < sizeof(smb_tree_connect_resp))
@@ -148,7 +148,7 @@ int           smb_tree_disconnect(smb_session *s, smb_tid tid)
     }
     smb_message_destroy(req_msg);
 
-    if (smb_session_recv_msg(s, &resp_msg) <= 0)
+    if (!smb_session_recv_msg(s, &resp_msg))
         return DSM_ERROR_NETWORK;
     if (!smb_session_check_nt_status(s, &resp_msg))
         return DSM_ERROR_NT;
@@ -348,7 +348,7 @@ int             smb_share_get_list(smb_session *s, smb_share_list *list, size_t 
         goto error;
     }
 
-    if ((res <= 0) || resp.packet->payload[68])
+    if (!res || resp.packet->payload[68])
     {
         BDSM_dbg("Bind call failed: 0x%hhx (reason = 0x%hhx)\n",
                  resp.packet->payload[68], resp.packet->payload[70]);
@@ -446,7 +446,7 @@ int             smb_share_get_list(smb_session *s, smb_share_list *list, size_t 
         goto error;
     }
 
-    if ((res <= 0) && (uint32_t)resp.packet->payload[resp.payload_size - 4])
+    if (!res && (uint32_t)resp.packet->payload[resp.payload_size - 4])
     {
         BDSM_dbg("NetShareEnumAll call failed.\n");
         ret = DSM_ERROR_NETWORK;

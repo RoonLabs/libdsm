@@ -185,7 +185,7 @@ static int      challenge(smb_session *s)
 
     assert(s != NULL);
 
-    if (smb_session_recv_msg(s, &msg) <= 0)
+    if (smb_session_recv_msg(s, &msg) == 0)
     {
         BDSM_dbg("spnego challenge(): Unable to receive message\n");
         return DSM_ERROR_NETWORK;
@@ -320,7 +320,7 @@ static int      auth(smb_session *s, const char *domain, const char *user,
     }
     smb_message_destroy(msg);
 
-    if (smb_session_recv_msg(s, &resp) <= 0)
+    if (smb_session_recv_msg(s, &resp) == 0)
         return DSM_ERROR_NETWORK;
 
     if (!smb_session_check_nt_status(s, &resp))

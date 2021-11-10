@@ -79,7 +79,7 @@ int smb_directory_rm(smb_session *s, smb_tid tid, const char *path)
 
     free(utf_pattern);
 
-    if (smb_session_recv_msg(s, &resp_msg) <= 0)
+    if (!smb_session_recv_msg(s, &resp_msg))
         return DSM_ERROR_NETWORK;
 
     if (!smb_session_check_nt_status(s, &resp_msg))
@@ -133,7 +133,7 @@ int smb_directory_create(smb_session *s, smb_tid tid, const char *path)
 
     free(utf_pattern);
 
-    if (smb_session_recv_msg(s, &resp_msg) <= 0)
+    if (!smb_session_recv_msg(s, &resp_msg))
         return DSM_ERROR_NETWORK;
 
     if (!smb_session_check_nt_status(s, &resp_msg))

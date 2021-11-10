@@ -56,7 +56,7 @@ static smb_message *smb_tr2_recv(smb_session *s)
     size_t                growth;
     int                   remaining;
 
-    if (smb_session_recv_msg(s, &recv) <= 0)
+    if (!smb_session_recv_msg(s, &recv))
         return NULL;
     tr2         = (smb_trans2_resp *)recv.packet->payload;
     growth      = tr2->total_data_count - tr2->data_count;
@@ -70,7 +70,7 @@ static smb_message *smb_tr2_recv(smb_session *s)
     while (remaining > 0)
     {
         remaining = smb_session_recv_msg(s, &recv);
-        if (remaining <= 0)
+        if (remaining)
         {
             tr2   = (smb_trans2_resp *)recv.packet->payload;
             /*
@@ -470,7 +470,7 @@ smb_file  *smb_fstat(smb_session *s, smb_tid tid, const char *path)
         return NULL;
     }
 
-    if ((smb_session_recv_msg(s, &reply)  <= 0)
+    if (!smb_session_recv_msg(s, &reply)
         || !smb_session_check_nt_status(s, &reply))
     {
         BDSM_dbg("Unable to recv msg or failure for %s\n", path);
