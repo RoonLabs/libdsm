@@ -185,7 +185,7 @@ static int        smb_negotiate(smb_session *s)
     }
     smb_message_destroy(msg);
 
-    if (!smb_session_recv_msg(s, &answer))
+    if (smb_session_recv_msg(s, &answer) <= 0)
         return DSM_ERROR_NETWORK;
 
     if (answer.payload_size < sizeof(smb_nego_resp))
@@ -275,7 +275,7 @@ static int        smb_session_login_ntlm(smb_session *s, const char *domain,
     }
     smb_message_destroy(msg);
 
-    if (smb_session_recv_msg(s, &answer) == 0)
+    if (smb_session_recv_msg(s, &answer) <= 0)
     {
         BDSM_dbg("Unable to get Session Setup AndX reply\n");
         return DSM_ERROR_NETWORK;

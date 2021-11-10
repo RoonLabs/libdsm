@@ -111,7 +111,7 @@ int         smb_fopen(smb_session *s, smb_tid tid, const char *path,
     if (!res)
         return DSM_ERROR_NETWORK;
 
-    if (!smb_session_recv_msg(s, &resp_msg))
+    if (smb_session_recv_msg(s, &resp_msg) <= 0)
         return DSM_ERROR_NETWORK;
     if (!smb_session_check_nt_status(s, &resp_msg))
         return DSM_ERROR_NT;
@@ -224,7 +224,7 @@ ssize_t   smb_fread(smb_session *s, smb_fd fd, void *buf, size_t buf_size)
     if (!res)
         return -1;
 
-    if (!smb_session_recv_msg(s, &resp_msg))
+    if (smb_session_recv_msg(s, &resp_msg) <= 0)
         return -1;
     if (!smb_session_check_nt_status(s, &resp_msg))
         return -1;
@@ -295,7 +295,7 @@ ssize_t   smb_fwrite(smb_session *s, smb_fd fd, void *buf, size_t buf_size)
     if (!res)
         return -1;
 
-    if (!smb_session_recv_msg(s, &resp_msg))
+    if (smb_session_recv_msg(s, &resp_msg) <= 0)
         return -1;
     if (!smb_session_check_nt_status(s, &resp_msg))
         return -1;
@@ -367,7 +367,7 @@ int  smb_file_rm(smb_session *s, smb_tid tid, const char *path)
 
     free(utf_pattern);
 
-    if (!smb_session_recv_msg(s, &resp_msg))
+    if (smb_session_recv_msg(s, &resp_msg) <= 0)
         return DSM_ERROR_NETWORK;
     if (!smb_session_check_nt_status(s, &resp_msg))
         return DSM_ERROR_NT;
@@ -434,7 +434,7 @@ int       smb_file_mv(smb_session *s, smb_tid tid, const char *old_path, const c
     free(utf_old_path);
     free(utf_new_path);
 
-    if (!smb_session_recv_msg(s, &resp_msg))
+    if (smb_session_recv_msg(s, &resp_msg) <= 0)
         return DSM_ERROR_NETWORK;
 
     if (!smb_session_check_nt_status(s, &resp_msg))

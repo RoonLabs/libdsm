@@ -182,5 +182,6 @@ enum smb_session_supports_what
 #define DSM_ERROR_NT        (-2) /* see smb_session_get_nt_status */
 #define DSM_ERROR_NETWORK   (-3)
 #define DSM_ERROR_CHARSET   (-4)
+#define DSM_ERROR_PROTO     (-5)
 
 #endif

@@ -177,12 +177,18 @@ int netbios_session_connect(uint32_t ip, netbios_session *s,
 
         s->state = NETBIOS_SESSION_CONNECTING;
         if (!netbios_session_packet_send(s))
-            goto error;
+        {
+            s->state = NETBIOS_SESSION_ERROR;
+            return 0;
+        }
 
         // Now receiving the reply from the server.
         recv_size = netbios_session_packet_recv(s, NULL);
         if (recv_size < 0)
-            goto error;
+        {
+            s->state = NETBIOS_SESSION_ERROR;
+            return 0;
+        }
 
         // Reply was negative, we are not connected :(
         if (s->packet->opcode != NETBIOS_OP_SESSION_REQ_OK)
