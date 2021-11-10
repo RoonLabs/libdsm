@@ -271,9 +271,8 @@ static ssize_t    netbios_session_get_next_packet(netbios_session *s)
         res = recv(s->socket, (uint8_t *)(s->packet) + sofar, total - sofar, 0);
         if (res <= 0)
         {
-            int err = errno;
             BDSM_perror("netbios_session_packet_recv: ");
-            return -(err);
+            return -1;
         }
         sofar += res;
     }
@@ -296,9 +295,8 @@ static ssize_t    netbios_session_get_next_packet(netbios_session *s)
 
         if (res <= 0)
         {
-            int err = errno;
             BDSM_perror("netbios_session_packet_recv: ");
-            return -(err);
+            return -1;
         }
         sofar += res;
     }
