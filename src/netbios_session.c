@@ -71,6 +71,7 @@ static int open_socket_and_connect(netbios_session *s)
     return DSM_SUCCESS;
 
 error:
+    s->state = -errno;
     BDSM_perror("netbios_session_new, open_socket: ");
     return DSM_ERROR_NETWORK;
 }
@@ -177,12 +178,18 @@ int netbios_session_connect(uint32_t ip, netbios_session *s,
 
         s->state = NETBIOS_SESSION_CONNECTING;
         if (!netbios_session_packet_send(s))
-            goto error;
+        {
+            s->state = NETBIOS_SESSION_ERROR;
+            return 0;
+        }
 
         // Now receiving the reply from the server.
         recv_size = netbios_session_packet_recv(s, NULL);
         if (recv_size < 0)
-            goto error;
+        {
+            s->state = NETBIOS_SESSION_ERROR;
+            return 0;
+        }
 
         // Reply was negative, we are not connected :(
         if (s->packet->opcode != NETBIOS_OP_SESSION_REQ_OK)
@@ -197,8 +204,9 @@ int netbios_session_connect(uint32_t ip, netbios_session *s,
     return 1;
 
 error:
+    if (s->state >= 0)
+        s->state = NETBIOS_SESSION_ERROR;
     free(encoded_name);
-    s->state = NETBIOS_SESSION_ERROR;
     return 0;
 }
 
@@ -265,8 +273,9 @@ static ssize_t    netbios_session_get_next_packet(netbios_session *s)
         res = recv(s->socket, (uint8_t *)(s->packet) + sofar, total - sofar, 0);
         if (res <= 0)
         {
+            int err = errno;
             BDSM_perror("netbios_session_packet_recv: ");
-            return -1;
+            return -(err);
         }
         sofar += res;
     }
@@ -289,8 +298,9 @@ static ssize_t    netbios_session_get_next_packet(netbios_session *s)
 
         if (res <= 0)
         {
+            int err = errno;
             BDSM_perror("netbios_session_packet_recv: ");
-            return -1;
+            return -(err);
         }
         sofar += res;
     }
