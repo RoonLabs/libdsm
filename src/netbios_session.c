@@ -45,6 +45,12 @@
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#endif
 #include <errno.h>
 
 #include "smb_defs.h"
@@ -56,6 +62,69 @@
 # define MSG_NOSIGNAL 0
 #endif
 
+// A blocking connect() to a host that drops SYNs waits for the kernel's retry
+// limit (about 2 minutes on Linux), per port.
+#define NETBIOS_SESSION_CONNECT_TIMEOUT_MS 5000
+
+// FIONBIO rather than fcntl(O_NONBLOCK): compat.h, via config.h, defines
+// O_NONBLOCK as 0 before fcntl.h is seen, which would leave the socket blocking.
+static int set_blocking(int fd, bool blocking)
+{
+#ifdef _WIN32
+    u_long nonblocking = blocking ? 0 : 1;
+    return ioctlsocket(fd, FIONBIO, &nonblocking) == 0 ? 0 : -1;
+#else
+    int nonblocking = blocking ? 0 : 1;
+    return ioctl(fd, FIONBIO, &nonblocking);
+#endif
+}
+
+static int connect_with_timeout(int fd, const struct sockaddr *addr,
+                                socklen_t addr_len, int timeout_ms)
+{
+    if (set_blocking(fd, false) < 0)
+        return -1;
+
+    if (connect(fd, addr, addr_len) < 0)
+    {
+#ifdef _WIN32
+        if (WSAGetLastError() != WSAEWOULDBLOCK)
+            return -1;
+#else
+        if (errno != EINPROGRESS)
+            return -1;
+#endif
+        fd_set wfds, efds;
+        struct timeval tv = { timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+        FD_ZERO(&wfds);
+        FD_SET(fd, &wfds);
+        FD_ZERO(&efds);
+        FD_SET(fd, &efds);
+        int ready;
+        do {
+            ready = select(fd + 1, NULL, &wfds, &efds, &tv);
+        } while (ready < 0 && errno == EINTR);
+        if (ready < 0)
+            return -1;
+        if (ready == 0)
+        {
+            errno = ETIMEDOUT;
+            return -1;
+        }
+        int so_error = 0;
+        socklen_t len = sizeof(so_error);
+        if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&so_error, &len) < 0)
+            return -1;
+        if (so_error != 0)
+        {
+            errno = so_error;
+            return -1;
+        }
+    }
+
+    return set_blocking(fd, true);
+}
+
 static int open_socket_and_connect(netbios_session *s)
 {
     if ((s->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -65,7 +134,9 @@ static int open_socket_and_connect(netbios_session *s)
     if (setsockopt(s->socket, SOL_SOCKET, SO_NOSIGPIPE, &(int){ 1 }, sizeof(int)))
         goto error;
 #endif
-    if (connect(s->socket, (struct sockaddr *)&s->remote_addr, sizeof(s->remote_addr)) <0)
+    if (connect_with_timeout(s->socket, (struct sockaddr *)&s->remote_addr,
+                             sizeof(s->remote_addr),
+                             NETBIOS_SESSION_CONNECT_TIMEOUT_MS) < 0)
         goto error;
 
     return DSM_SUCCESS;
@@ -73,6 +144,12 @@ static int open_socket_and_connect(netbios_session *s)
 error:
     s->state = -errno;
     BDSM_perror("netbios_session_new, open_socket: ");
+    // netbios_session_connect opens a new socket for the next port.
+    if (s->socket >= 0)
+    {
+        closesocket(s->socket);
+        s->socket = -1;
+    }
     return DSM_ERROR_NETWORK;
 }
 
