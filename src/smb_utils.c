@@ -34,35 +34,24 @@
 
 #include <assert.h>
 #include <iconv.h>
-#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
-#if HAVE_NL_LANGINFO && !defined( __APPLE__ )
-# include <langinfo.h>
-#endif
-
 #include "bdsm_debug.h"
 #include "smb_utils.h"
 
+// Strings in and out of libdsm are UTF-8, not the locale's codeset. A service
+// usually runs in the C locale, whose codeset is ASCII, and a password that fails
+// to convert reaches the NTLM hash as the empty password: the login fails as a
+// wrong password, with nothing to say why.
 static const char *current_encoding()
 {
 #if defined( __APPLE__ )
     return "UTF8";
-#elif !HAVE_NL_LANGINFO
-    return "UTF-8";
 #else
-    static int locale_set = 0;
-
-    if (!locale_set)
-    {
-        setlocale(LC_ALL, "");
-        locale_set = 1;
-    }
-    //BDSM_dbg("%s\n", nl_langinfo(CODESET));
-    return nl_langinfo(CODESET);
+    return "UTF-8";
 #endif
 }
 
@@ -118,11 +107,11 @@ static size_t smb_iconv(const char *src, size_t src_len, char **dst,
 size_t      smb_to_utf16(const char *src, size_t src_len, char **dst)
 {
     return (smb_iconv(src, src_len, dst,
-                      current_encoding(), "UCS-2LE"));
+                      current_encoding(), "UTF-16LE"));
 }
 
 size_t      smb_from_utf16(const char *src, size_t src_len, char **dst)
 {
     return (smb_iconv(src, src_len, dst,
-                      "UCS-2LE", current_encoding()));
+                      "UTF-16LE", current_encoding()));
 }
